@@ -1,14 +1,14 @@
-import axios from 'axios';
-import { ApolloClient, InMemoryCache, HttpLink, gql } from '@apollo/client';
+import axios from "axios";
+import { ApolloClient, InMemoryCache, HttpLink, gql } from "@apollo/client";
 
 // Base URL configuration
-const BASE_URL = 'https://admin.twilightfinland.eu/graphql';
+const BASE_URL = "https://api.twilightfinland.eu/graphql";
 
 // Axios instance configuration
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -18,7 +18,9 @@ const apolloClient = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-// TypeScript interfaces for data handling
+// -----------------------------
+// Types
+// -----------------------------
 
 // Generic response interface
 interface ApiResponse<T> {
@@ -31,62 +33,86 @@ interface ApiResponse<T> {
 }
 
 // User related interfaces
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   // Add more user fields as needed
 }
 
-interface UserLoginInput {
+export interface UserLoginInput {
   email: string;
   password: string;
 }
 
-interface UserRegistrationInput {
+export interface UserRegistrationInput {
   name: string;
   email: string;
   password: string;
-  // Add more registration fields as needed
 }
 
 // Course related interfaces
-interface Course {
+export interface Course {
   id: string;
   title: string;
   description: string;
-  // Add more course fields as needed
 }
 
-// GraphQL query functions
+// -----------------------------
+// Apollo Client helpers
+// -----------------------------
 
 /**
  * Execute a GraphQL query using Apollo Client
- * @param query GraphQL query
- * @param variables Query variables
- * @returns Promise with query result
  */
-async function executeQuery<T>(query: string, variables?: Record<string, any>): Promise<ApiResponse<T>> {
+async function executeQuery<T>(
+  query: string,
+  variables?: Record<string, any>,
+): Promise<T> {
   try {
     const result = await apolloClient.query({
-      query: gql`${query}`,
+      query: gql`
+        ${query}
+      `,
       variables,
     });
-    return { data: result.data as T };
+    return result.data as T;
   } catch (error: any) {
     if (error.graphQLErrors) {
-      return { data: {} as T, errors: error.graphQLErrors };
+      throw new Error(error.graphQLErrors[0].message);
     }
     throw error;
   }
 }
 
 /**
- * Get user by ID
- * @param id User ID
- * @returns User data
+ * Execute a GraphQL mutation using Apollo Client
  */
-export async function getUserById(id: string): Promise<ApiResponse<{ user: User }>> {
+async function executeMutation<T>(
+  mutation: string,
+  variables?: Record<string, any>,
+): Promise<T> {
+  try {
+    const result = await apolloClient.mutate({
+      mutation: gql`
+        ${mutation}
+      `,
+      variables,
+    });
+    return result.data as T;
+  } catch (error: any) {
+    if (error.graphQLErrors) {
+      throw new Error(error.graphQLErrors[0].message);
+    }
+    throw error;
+  }
+}
+
+// -----------------------------
+// Example Queries
+// -----------------------------
+
+export async function getUserById(id: string): Promise<{ user: User }> {
   const query = `
     query GetUser($id: ID!) {
       user(id: $id) {
@@ -99,11 +125,7 @@ export async function getUserById(id: string): Promise<ApiResponse<{ user: User 
   return executeQuery<{ user: User }>(query, { id });
 }
 
-/**
- * Get all courses
- * @returns List of courses
- */
-export async function getAllCourses(): Promise<ApiResponse<{ courses: Course[] }>> {
+export async function getAllCourses(): Promise<{ courses: Course[] }> {
   const query = `
     query GetAllCourses {
       courses {
@@ -116,35 +138,13 @@ export async function getAllCourses(): Promise<ApiResponse<{ courses: Course[] }
   return executeQuery<{ courses: Course[] }>(query);
 }
 
-// GraphQL mutation functions
+// -----------------------------
+// Example Mutations
+// -----------------------------
 
-/**
- * Execute a GraphQL mutation using Apollo Client
- * @param mutation GraphQL mutation
- * @param variables Mutation variables
- * @returns Promise with mutation result
- */
-async function executeMutation<T>(mutation: string, variables?: Record<string, any>): Promise<ApiResponse<T>> {
-  try {
-    const result = await apolloClient.mutate({
-      mutation: gql`${mutation}`,
-      variables,
-    });
-    return { data: result.data as T };
-  } catch (error: any) {
-    if (error.graphQLErrors) {
-      return { data: {} as T, errors: error.graphQLErrors };
-    }
-    throw error;
-  }
-}
-
-/**
- * Login user
- * @param input Login credentials
- * @returns Login result with token
- */
-export async function loginUser(input: UserLoginInput): Promise<ApiResponse<{ login: { token: string; user: User } }>> {
+export async function loginUser(
+  input: UserLoginInput,
+): Promise<{ login: { token: string; user: User } }> {
   const mutation = `
     mutation Login($email: String!, $password: String!) {
       login(email: $email, password: $password) {
@@ -157,15 +157,15 @@ export async function loginUser(input: UserLoginInput): Promise<ApiResponse<{ lo
       }
     }
   `;
-  return executeMutation<{ login: { token: string; user: User } }>(mutation, input);
+  return executeMutation<{ login: { token: string; user: User } }>(
+    mutation,
+    input,
+  );
 }
 
-/**
- * Register new user
- * @param input User registration data
- * @returns Registration result
- */
-export async function registerUser(input: UserRegistrationInput): Promise<ApiResponse<{ register: { user: User } }>> {
+export async function registerUser(
+  input: UserRegistrationInput,
+): Promise<{ register: { user: User } }> {
   const mutation = `
     mutation Register($name: String!, $email: String!, $password: String!) {
       register(name: $name, email: $email, password: $password) {
@@ -180,28 +180,37 @@ export async function registerUser(input: UserRegistrationInput): Promise<ApiRes
   return executeMutation<{ register: { user: User } }>(mutation, input);
 }
 
-// Direct axios methods for more flexibility
+// -----------------------------
+// Axios Raw Query (fixed)
+// -----------------------------
 
 /**
  * Execute a raw GraphQL query using axios
- * @param query GraphQL query string
- * @param variables Query variables
- * @returns Promise with query result
+ * Returns unwrapped `T`
  */
-export async function executeRawQuery<T>(query: string, variables?: Record<string, any>): Promise<ApiResponse<T>> {
+export async function executeRawQuery<T>(
+  query: string,
+  variables?: Record<string, any>,
+): Promise<T> {
   try {
-    const response = await axiosInstance.post('', {
+    const response = await axiosInstance.post<ApiResponse<T>>("", {
       query,
       variables,
     });
-    return response.data;
+
+    if (response.data.errors && response.data.errors.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    // ✅ unwrap .data so consumers just get T
+    return response.data.data;
   } catch (error: any) {
-    if (error.response && error.response.data) {
-      return error.response.data;
+    if (error.response?.data?.errors) {
+      throw new Error(error.response.data.errors[0].message);
     }
     throw error;
   }
 }
 
-// Export the axios instance and Apollo client for direct use if needed
+// Export clients if needed
 export { axiosInstance, apolloClient };

@@ -5,7 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import authService, { User } from "./authService";
+import authService, { User, LoginResponse } from "./authService";
 
 interface AuthContextType {
   user: User | null;
@@ -46,7 +46,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check if user is already logged in
     const token = authService.getToken();
     const userData = authService.getUser();
 
@@ -60,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const result = await authService.login(email, password);
+      const result: LoginResponse = await authService.login(email, password);
       if (result?.login?.success) {
         const { token, user } = result.login;
         authService.setToken(token);

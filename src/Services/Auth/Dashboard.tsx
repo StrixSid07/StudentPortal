@@ -35,7 +35,7 @@ interface ExamPackage {
       name: string;
       code: string;
       price: number;
-      currency: any; // JSON scalar
+      currency: any; // API sometimes sends JSON, sometimes object
       flag: string;
       isoCode: string;
     };
@@ -50,6 +50,23 @@ interface UserPackageResponse {
     success: boolean;
     message: string;
     data: ExamPackage[];
+  };
+}
+
+interface CreateOrderResponse {
+  CreateOrder: {
+    success: boolean;
+    key: string;
+    orderId: string;
+    amount: number;
+    currency: string;
+  };
+}
+
+interface VerifyPaymentResponse {
+  VerifyPayment: {
+    success: boolean;
+    message: string;
   };
 }
 
@@ -84,9 +101,7 @@ const Dashboard: React.FC = () => {
   const [isPaid, setIsPaid] = useState<boolean>(user?.isPaid || false);
 
   useEffect(() => {
-    if (user) {
-      fetchUserPackage();
-    }
+    if (user) fetchUserPackage();
   }, [user]);
 
   const fetchUserPackage = async () => {
@@ -139,20 +154,22 @@ const Dashboard: React.FC = () => {
     `;
 
     try {
-      const response = await executeRawQuery<{ data: UserPackageResponse }>(
+      // ✅ FIXED: remove extra `.data` nesting
+      const response = await executeRawQuery<UserPackageResponse>(
         userPackageQuery,
-        { userId: parseInt(user.id) },
+        { userId: parseInt(user.id, 10) },
       );
 
-      if (response.data?.getUserPackageByClassAndCountry?.success) {
-        setUserPackage(response.data.getUserPackageByClassAndCountry.data);
+      if (response?.getUserPackageByClassAndCountry?.success) {
+        setUserPackage(response.getUserPackageByClassAndCountry.data);
       } else {
         setError(
-          response.data?.getUserPackageByClassAndCountry?.message ||
+          response?.getUserPackageByClassAndCountry?.message ||
             "Failed to fetch user package",
         );
       }
     } catch (err) {
+      console.error("Fetch error:", err);
       setError("An error occurred while fetching your exam package");
     } finally {
       setLoading(false);
@@ -166,29 +183,44 @@ const Dashboard: React.FC = () => {
 
   // ✅ Payment flow
   const handlePayment = async (pkg: ExamPackage) => {
+    if (!user) {
+      alert("User not found. Please login again.");
+      return;
+    }
+
     try {
       const price = pkg.countries[0]?.price ?? pkg.countries[0]?.country?.price;
+
+      // Safely handle currency (object or JSON string)
       const currencyData = pkg.countries[0]?.country?.currency;
       let currencyObj: { symbol?: string; name?: string; code?: string } = {};
 
-      if (typeof currencyData === "string") {
-        currencyObj = JSON.parse(currencyData);
-      } else {
-        currencyObj = currencyData || {};
+      try {
+        if (typeof currencyData === "string") {
+          currencyObj = JSON.parse(currencyData);
+        } else {
+          currencyObj = currencyData || {};
+        }
+      } catch {
+        currencyObj = {};
       }
 
       const currency = currencyObj?.code || "INR";
       const receipt = `receipt_${Date.now()}`;
 
-      const orderResp = await executeRawQuery(CREATE_ORDER, {
-        userId: parseInt(user.id),
-        amount: price,
-        currency,
-        receipt,
-      });
+      const orderResp = await executeRawQuery<CreateOrderResponse>(
+        CREATE_ORDER,
+        {
+          userId: parseInt(user.id, 10),
+          amount: price,
+          currency,
+          receipt,
+        },
+      );
 
-      const order = orderResp.data?.CreateOrder;
-      if (!order || order.success !== "true") {
+      const order = orderResp?.CreateOrder;
+      const isSuccess = Boolean(order.success);
+      if (!order || !isSuccess) {
         alert("Failed to create order");
         return;
       }
@@ -201,13 +233,16 @@ const Dashboard: React.FC = () => {
         description: pkg.name,
         order_id: order.orderId,
         handler: async function (response: any) {
-          const verifyResp = await executeRawQuery(VERIFY_PAYMENT, {
-            orderId: response.razorpay_order_id,
-            paymentId: response.razorpay_payment_id,
-            signature: response.razorpay_signature,
-          });
+          const verifyResp = await executeRawQuery<VerifyPaymentResponse>(
+            VERIFY_PAYMENT,
+            {
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            },
+          );
 
-          const verifyResult = verifyResp.data?.VerifyPayment;
+          const verifyResult = verifyResp?.VerifyPayment;
           if (verifyResult?.success) {
             alert("Payment successful ✅");
             setIsPaid(true);
@@ -229,7 +264,7 @@ const Dashboard: React.FC = () => {
 
   const formatDate = (timestamp: string) => {
     if (!timestamp) return "N/A";
-    const date = new Date(parseInt(timestamp));
+    const date = new Date(parseInt(timestamp, 10));
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -239,54 +274,26 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex">
-      {/* ✅ Sidebar always rendered */}
-      <Sidebar
-        userData={{
-          id: user.id,
-          fullname: user.fullname,
-          email: user.email,
-          mobile: user.mobile,
-          class: user.class,
-          country: user.country,
-          isPaid,
-          examType: user.examType,
-        }}
-        onLogout={handleLogout}
-      />
+      {/* ✅ Sidebar always rendered if user exists */}
+      {user && (
+        <Sidebar
+          userData={{
+            id: user.id,
+            fullname: user.fullname,
+            email: user.email,
+            mobile: user.mobile,
+            class: user.class,
+            country: user.country,
+            isPaid,
+            examType: user.examType,
+          }}
+          onLogout={handleLogout}
+        />
+      )}
 
       {/* ✅ Main Content */}
-      <main className="md:mt-0 mt-32">
+      <main className="mt-32 md:mt-0">
         <div className="space-y-8">
-          {/* Profile Card */}
-          {/* {user && (
-            <Card className="flex items-center gap-6 p-6 shadow-md">
-              <Avatar
-                img={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user.fullname,
-                )}&background=0D8ABC&color=fff`}
-                alt="User avatar"
-                size="xl"
-                rounded
-              />
-              <div>
-                <h3 className="text-2xl font-bold">{user.fullname}</h3>
-                <p className="text-gray-600">{user.email}</p>
-                <div className="mt-2 flex gap-6 text-sm text-gray-700">
-                  <span>Class: {user.class}</span>
-                  <span>Country: {user.country}</span>
-                </div>
-                <div className="mt-2">
-                  {isPaid ? (
-                    <Badge color="success">Paid ✅</Badge>
-                  ) : (
-                    <Badge color="failure">Unpaid ❌</Badge>
-                  )}
-                </div>
-              </div>
-            </Card>
-          )} */}
-
-          {/* Exam Packages */}
           <Card className="h-screen w-full">
             <h2 className="mb-6 text-2xl font-bold text-gray-800">
               Your Exam Package
@@ -354,10 +361,6 @@ const Dashboard: React.FC = () => {
                             <span className="font-medium">Start Date:</span>{" "}
                             {formatDate(pkg.countries[0]?.startDateTime)}
                           </p>
-                          {/* <p>
-                            <span className="font-medium">End Date:</span>{" "}
-                            {formatDate(pkg.countries[0]?.endDateTime)}
-                          </p> */}
                           <p>
                             <span className="font-medium">Country:</span>{" "}
                             {pkg.countries[0]?.country?.name}
@@ -365,19 +368,19 @@ const Dashboard: React.FC = () => {
                           <p>
                             <span className="font-medium">Price:</span>{" "}
                             {(() => {
-                              const currency =
-                                pkg.countries[0]?.country?.currency;
                               let currencyObj: { symbol?: string } = {};
                               try {
+                                const currency =
+                                  pkg.countries[0]?.country?.currency;
                                 if (typeof currency === "string") {
                                   currencyObj = JSON.parse(currency);
                                 } else {
                                   currencyObj = currency || {};
                                 }
-                              } catch (e) {
-                                console.error("Currency parse error:", e);
+                              } catch {
+                                currencyObj = {};
                               }
-                              const symbol = currencyObj?.symbol || "";
+                              const symbol = currencyObj?.symbol || "₹";
                               const price =
                                 pkg.countries[0]?.price ??
                                 pkg.countries[0]?.country?.price;

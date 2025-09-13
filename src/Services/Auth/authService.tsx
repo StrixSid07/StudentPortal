@@ -1,6 +1,6 @@
 import { executeRawQuery } from "../api";
 
-// User interface based on the provided GraphQL response
+// User interface based on GraphQL response
 export interface User {
   id: string;
   fullname: string;
@@ -18,7 +18,6 @@ export interface User {
   updatedAt: string;
 }
 
-// Login response interface
 export interface LoginResponse {
   login: {
     success: boolean;
@@ -30,62 +29,20 @@ export interface LoginResponse {
   };
 }
 
-// Login input interface
-export interface LoginInput {
-  loginEmail2: string;
-  loginPassword2: string;
-}
-
-// Response interfaces for password reset flow
 export interface ForgotPasswordResponse {
-  ForgotPassword: {
-    success: boolean;
-    message: string;
-  };
+  ForgotPassword: { success: boolean; message: string };
 }
 
 export interface VerifyOtpResponse {
-  verifyotp: {
-    success: boolean;
-    message: string;
-  };
+  verifyotp: { success: boolean; message: string };
 }
 
 export interface ResetPasswordResponse {
-  ResetPassword: {
-    success: boolean;
-    message: string;
-  };
+  ResetPassword: { success: boolean; message: string };
 }
 
-// Registration input interface
-export interface RegisterInput {
-  isOnlineExam: boolean;
-  fullname: string;
-  email: string;
-  mobile: string;
-  password: string;
-  dob: string;
-  gender: string;
-  class: string;
-  country: string;
-}
-
-// Registration response interface
 export interface RegisterResponse {
-  register: {
-    success: boolean;
-    message: string;
-    user: User;
-  };
-}
-
-// Countries response interface
-export interface CountriesResponse {
-  countries: {
-    rows: Country[];
-    count: number;
-  };
+  register: { success: boolean; message: string; user: User };
 }
 
 export interface Country {
@@ -93,18 +50,17 @@ export interface Country {
   name: string;
   code: string;
   price: number;
-  currency: {
-    code: string;
-    name: string;
-    symbol: string;
-  };
+  currency: { code: string; name: string; symbol: string };
   flag: string;
   isoCode: string;
 }
 
-// Authentication service
+export interface CountriesResponse {
+  countries: { rows: Country[]; count: number };
+}
+
 const authService = {
-  // Login function
+  // Login
   login: async (email: string, password: string) => {
     const loginMutation = `
       mutation Login($loginEmail2: String!, $loginPassword2: String!) {
@@ -132,116 +88,87 @@ const authService = {
         }
       }
     `;
-
-    const variables: LoginInput = {
+    return executeRawQuery<LoginResponse>(loginMutation, {
       loginEmail2: email,
       loginPassword2: password,
-    };
-
-    try {
-      const response = await executeRawQuery<{ data: LoginResponse }>(
-        loginMutation,
-        variables,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    });
   },
 
-  // Forgot Password function
+  // Forgot Password
   forgotPassword: async (email: string) => {
-    const forgotPasswordMutation = `
+    const mutation = `
       mutation ForgotPassword($email: String!) {
         ForgotPassword(email: $email) {
-          message
           success
+          message
         }
       }
     `;
-    const variables = { email };
-    try {
-      const response = await executeRawQuery<{ data: ForgotPasswordResponse }>(
-        forgotPasswordMutation,
-        variables,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Forgot password error:", error);
-      throw error;
-    }
+    return executeRawQuery<ForgotPasswordResponse>(mutation, { email });
   },
 
-  // Verify OTP function
+  // Verify OTP
   verifyOtp: async (email: string, otp: string) => {
-    const verifyOtpMutation = `
+    const mutation = `
       mutation Verifyotp($email: String!, $otp: String!) {
         verifyotp(email: $email, otp: $otp) {
-          message
           success
+          message
         }
       }
     `;
-    const variables = { email, otp };
-    try {
-      const response = await executeRawQuery<{ data: VerifyOtpResponse }>(
-        verifyOtpMutation,
-        variables,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Verify OTP error:", error);
-      throw error;
-    }
+    return executeRawQuery<VerifyOtpResponse>(mutation, { email, otp });
   },
 
-  // Reset Password function
+  // Reset Password
   resetPassword: async (email: string, newPassword: string) => {
-    const resetPasswordMutation = `
+    const mutation = `
       mutation ResetPassword($newPassword: String!, $email: String) {
         ResetPassword(newPassword: $newPassword, email: $email) {
-          message
           success
+          message
         }
       }
     `;
-    const variables = { newPassword, email };
-    try {
-      const response = await executeRawQuery<{ data: ResetPasswordResponse }>(
-        resetPasswordMutation,
-        variables,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Reset password error:", error);
-      throw error;
-    }
+    return executeRawQuery<ResetPasswordResponse>(mutation, {
+      email,
+      newPassword,
+    });
   },
 
-  // Register function
-  register: async (registerData: RegisterInput) => {
-    const registerMutation = `
+  // Register
+  register: async (input: {
+    isOnlineExam: boolean;
+    fullname: string;
+    email: string;
+    mobile: string;
+    password: string;
+    dob: string;
+    gender: string;
+    class: string;
+    country: string;
+  }) => {
+    const mutation = `
       mutation Register(
-        $isOnlineExam: Boolean!
-        $fullname: String
-        $email: String
-        $mobile: String
-        $password: String
-        $dob: String
-        $gender: String
-        $class: String
+        $isOnlineExam: Boolean!,
+        $fullname: String,
+        $email: String,
+        $mobile: String,
+        $password: String,
+        $dob: String,
+        $gender: String,
+        $class: String,
         $country: String
       ) {
         register(
-          isOnlineExam: $isOnlineExam
-          fullname: $fullname
-          email: $email
-          mobile: $mobile
-          password: $password
-          dob: $dob
-          gender: $gender
-          class: $class
+          isOnlineExam: $isOnlineExam,
+          fullname: $fullname,
+          email: $email,
+          mobile: $mobile,
+          password: $password,
+          dob: $dob,
+          gender: $gender,
+          class: $class,
           country: $country
         ) {
           success
@@ -264,21 +191,12 @@ const authService = {
         }
       }
     `;
-    try {
-      const response = await executeRawQuery<{ data: RegisterResponse }>(
-        registerMutation,
-        registerData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
-    }
+    return executeRawQuery<RegisterResponse>(mutation, input);
   },
 
-  // Get countries function
+  // Get countries
   getCountries: async (search?: string, limit?: number, offset?: number) => {
-    const countriesQuery = `
+    const query = `
       query Countries($search: String, $limit: Int, $offset: Int) {
         countries(search: $search, limit: $limit, offset: $offset) {
           rows {
@@ -289,56 +207,21 @@ const authService = {
         }
       }
     `;
-    const variables = { search, limit, offset };
-    try {
-      const response = await executeRawQuery<{ data: CountriesResponse }>(
-        countriesQuery,
-        variables,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Get countries error:", error);
-      throw error;
-    }
+    return executeRawQuery<CountriesResponse>(query, { search, limit, offset });
   },
 
-  // Save auth token to localStorage
-  setToken: (token: string) => {
-    localStorage.setItem("auth_token", token);
-  },
+  // Local storage helpers
+  setToken: (token: string) => localStorage.setItem("auth_token", token),
+  getToken: () => localStorage.getItem("auth_token"),
+  removeToken: () => localStorage.removeItem("auth_token"),
 
-  // Get auth token from localStorage
-  getToken: () => {
-    return localStorage.getItem("auth_token");
-  },
-
-  // Remove auth token from localStorage
-  removeToken: () => {
-    localStorage.removeItem("auth_token");
-  },
-
-  // Check if user is authenticated
-  isAuthenticated: () => {
-    return !!localStorage.getItem("auth_token");
-  },
-
-  // Save user data to localStorage
-  setUser: (user: User) => {
-    localStorage.setItem("user", JSON.stringify(user));
-  },
-
-  // Get user data from localStorage
+  setUser: (user: User) => localStorage.setItem("user", JSON.stringify(user)),
   getUser: (): User | null => {
-    const userData = localStorage.getItem("user");
-    return userData ? JSON.parse(userData) : null;
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
   },
+  removeUser: () => localStorage.removeItem("user"),
 
-  // Remove user data from localStorage
-  removeUser: () => {
-    localStorage.removeItem("user");
-  },
-
-  // Logout user
   logout: () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user");
