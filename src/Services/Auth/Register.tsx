@@ -139,15 +139,15 @@ const Register: React.FC = () => {
         <Card className="border-0 shadow-xl">
           <div className="flex flex-col items-center justify-center">
             <img
-              src="/src/asset/logo/logo.jpg"
+              src="/logo.jpg"
               alt="Twilight Finland Logo"
-              className="h-16 w-24 rounded-md mb-1"
+              className="mb-1 h-16 w-24 rounded-md"
             />
             <h2 className="text-center text-3xl font-bold text-blue-950">
               Create an Account
             </h2>
           </div>
-          
+
           {error && (
             <Alert color="failure" className="mb-4">
               {error}
@@ -338,7 +338,11 @@ const Register: React.FC = () => {
                     onTouchEnd={() => setShowPassword(false)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff size={18} className="text-blue-950" /> : <Eye size={18} className="text-blue-950" />}
+                    {showPassword ? (
+                      <EyeOff size={18} className="text-blue-950" />
+                    ) : (
+                      <Eye size={18} className="text-blue-950" />
+                    )}
                   </button>
                 </div>
                 {formErrors.password && (

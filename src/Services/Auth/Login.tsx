@@ -38,7 +38,7 @@ const Login: React.FC = () => {
           {/* Company Logo and Name */}
           <div className="mb-1 flex flex-col items-center">
             <img
-              src="/src/asset/logo/logo.jpg"
+              src="/logo.jpg"
               alt="Twilight Finland Logo"
               className="h-16 w-24 rounded-md"
             />

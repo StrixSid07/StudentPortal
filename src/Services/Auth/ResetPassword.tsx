@@ -64,7 +64,7 @@ const ResetPassword: React.FC = () => {
         <Card className="border-0 shadow-xl">
           <div className="mb-4 flex flex-col items-center">
             <img
-              src="/src/asset/logo/logo.jpg"
+              src="/logo.jpg"
               alt="Company Logo"
               className="h-16 w-24 rounded-md"
             />
@@ -131,7 +131,11 @@ const ResetPassword: React.FC = () => {
                   onTouchEnd={() => setShowConfirmPassword(false)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
             </div>

@@ -7,7 +7,7 @@ const LoadingOverlay: React.FC = () => {
         {/* Logo + Snake Spinner */}
         <div className="relative mb-3 flex h-24 w-32 items-center justify-center">
           <img
-            src="/src/asset/logo/logo.jpg"
+            src="/logo.jpg"
             alt="Twilight Finland Logo"
             className="h-24 w-32 rounded-md"
           />
