@@ -206,7 +206,7 @@ const Register: React.FC = () => {
                 Mobile Number
               </Label>
               <PhoneInput
-                country="in"
+                country="fi"
                 value={formData.mobile}
                 onChange={handlePhoneChange}
                 inputProps={{ name: "mobile", id: "mobile" }}
