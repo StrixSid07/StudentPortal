@@ -114,6 +114,8 @@ const Register: React.FC = () => {
 
     try {
       const { confirmPassword, ...registerData } = formData;
+
+      registerData.email = registerData.email.trim(); //
       const result = await authService.register(registerData);
 
       if (result.register.success) {
