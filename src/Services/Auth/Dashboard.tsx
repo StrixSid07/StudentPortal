@@ -286,6 +286,7 @@ const Dashboard: React.FC = () => {
             country: user.country,
             isPaid,
             examType: user.examType,
+            isOnlineExam: user.isOnlineExam,
           }}
           onLogout={handleLogout}
         />

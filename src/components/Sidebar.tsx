@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Avatar, Button } from "flowbite-react";
-import { Menu, X, Book, LogOut, FileText, Phone, Shield } from "lucide-react";
+import { Menu, X, Book, LogOut, FileText, Phone, Shield, Wifi, WifiOff } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface UserData {
@@ -12,6 +12,7 @@ interface UserData {
   country?: string;
   isPaid?: boolean;
   examType?: string;
+  isOnlineExam?: boolean;
 }
 
 interface SidebarProps {
@@ -42,6 +43,27 @@ const Sidebar: React.FC<SidebarProps> = ({ userData, onLogout }) => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  // Function to get exam mode display
+  const getExamModeDisplay = () => {
+    if (!userData.isPaid) {
+      return null; // Don't show mode if user hasn't paid
+    }
+    
+    const isOnline = userData.isOnlineExam;
+    // Add console log for debugging
+    console.log('Debug - userData.isOnlineExam:', userData.isOnlineExam);
+    console.log('Debug - isOnline:', isOnline);
+    console.log('Debug - userData.isPaid:', userData.isPaid);
+    
+    return {
+      text: isOnline ? "Online" : "Offline",
+      icon: isOnline ? <Wifi size={16} /> : <WifiOff size={16} />,
+      color: isOnline ? "text-green-400" : "text-orange-400"
+    };
+  };
+
+  const examMode = getExamModeDisplay();
 
   return (
     <>
@@ -104,16 +126,23 @@ const Sidebar: React.FC<SidebarProps> = ({ userData, onLogout }) => {
                 {userData.country}
               </p>
             )}
+            <p className="flex items-center">
+              <span className="mr-2">💰</span>
+              Status: {userData.isPaid ? "Paid" : "Unpaid"}
+            </p>
+            {/* Online/Offline Mode Status - Only show if user has paid */}
+            {examMode && (
+              <p className={`flex items-center ${examMode.color}`}>
+                <span className="mr-2">{examMode.icon}</span>
+                Mode: {examMode.text}
+              </p>
+            )}
             {userData.examType && (
               <p className="flex items-center">
                 <span className="mr-2">📝</span>
                 Exam: {userData.examType}
               </p>
             )}
-            <p className="flex items-center">
-              <span className="mr-2">💰</span>
-              Status: {userData.isPaid ? "Paid" : "Unpaid"}
-            </p>
           </div>
         </div>
 

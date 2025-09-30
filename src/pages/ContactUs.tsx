@@ -17,6 +17,7 @@ const ContactUs: React.FC = () => {
     country: user?.country || "",
     examType: user?.examType || "",
     isPaid: user?.isPaid || false,
+    isOnlineExam: user?.isOnlineExam || false,
   };
 
   return (

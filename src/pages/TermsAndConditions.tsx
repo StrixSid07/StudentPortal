@@ -26,6 +26,7 @@ const TermsAndConditions: React.FC = () => {
     class: user?.class || "",
     country: user?.country || "",
     isPaid: user?.isPaid || false,
+    isOnlineExam: user?.isOnlineExam || false,
   };
 
   return (
