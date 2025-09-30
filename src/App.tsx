@@ -17,6 +17,7 @@ import LoadingOverlay from "./components/LoadingOverlay";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Material from "./pages/Material";
 
 // Wrapper with initial loader
 const AppContent: React.FC = () => {
@@ -43,7 +44,16 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          {/* New Pages */}
+          {/* Material Page */}
+          <Route
+            path="/material"
+            element={
+              <ProtectedRoute>
+                <Material />
+              </ProtectedRoute>
+            }
+          />
+          {/* Other Pages */}
           <Route
             path="/terms-and-conditions"
             element={

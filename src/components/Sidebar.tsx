@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Avatar, Button } from "flowbite-react";
-import { Menu, X, Book, LogOut, FileText, Phone, Shield, Wifi, WifiOff } from "lucide-react";
+import { Menu, X, Book, LogOut, FileText, Phone, Shield, Wifi, WifiOff, BookOpen } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface UserData {
@@ -34,7 +34,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userData, onLogout }) => {
 
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Book size={20} /> },
-    // New navigation items
+    // Add Material option - only show if user has paid
+    ...(userData.isPaid ? [{ name: "Material", path: "/material", icon: <BookOpen size={20} /> }] : []),
+    // Other navigation items
     { name: "Terms & Conditions", path: "/terms-and-conditions", icon: <FileText size={20} /> },
     { name: "Contact Us", path: "/contact-us", icon: <Phone size={20} /> },
     { name: "Privacy Policy", path: "/privacy-policy", icon: <Shield size={20} /> },
@@ -49,100 +51,123 @@ const Sidebar: React.FC<SidebarProps> = ({ userData, onLogout }) => {
     if (!userData.isPaid) {
       return null; // Don't show mode if user hasn't paid
     }
-    
-    const isOnline = userData.isOnlineExam;
-    // Add console log for debugging
-    console.log('Debug - userData.isOnlineExam:', userData.isOnlineExam);
-    console.log('Debug - isOnline:', isOnline);
-    console.log('Debug - userData.isPaid:', userData.isPaid);
-    
-    return {
-      text: isOnline ? "Online" : "Offline",
-      icon: isOnline ? <Wifi size={16} /> : <WifiOff size={16} />,
-      color: isOnline ? "text-green-400" : "text-orange-400"
-    };
-  };
 
-  const examMode = getExamModeDisplay();
+    console.log("userData.isOnlineExam:", userData.isOnlineExam);
+    const isOnline = userData.isOnlineExam === true;
+    console.log("isOnline:", isOnline);
+    console.log("userData.isPaid:", userData.isPaid);
+
+    return (
+      <div className="flex items-center text-sm">
+        {isOnline ? (
+          <>
+            <Wifi size={16} className="mr-2 text-green-400" />
+            <span className="text-green-400">Mode: Online</span>
+          </>
+        ) : (
+          <>
+            <WifiOff size={16} className="mr-2 text-orange-400" />
+            <span className="text-orange-400">Mode: Offline</span>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
       {/* Mobile Toggle Button */}
-      <div className="fixed top-0 left-0 z-40 flex h-16 w-full items-center justify-between bg-blue-950 px-4 md:hidden">
-        <button
-          onClick={toggleSidebar}
-          className="rounded-lg p-2 text-white hover:bg-blue-900"
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
+      <Button
+        onClick={toggleSidebar}
+        className="fixed left-4 top-4 z-50 bg-blue-950 p-2 text-white hover:bg-blue-900 md:hidden"
+      >
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      </Button>
 
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="bg-opacity-50 fixed inset-0 z-30 bg-black md:hidden"
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
           onClick={closeSidebar}
-        ></div>
+        />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed md:top-0 top-16 left-0 z-30 h-full w-64 transform bg-blue-950 transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`fixed left-0 top-0 z-50 h-full w-64 transform bg-blue-950 transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
       >
+        {/* Company Logo and Name */}
+        <div className="border-b border-blue-900 p-4">
+          <div className="flex items-center">
+            <img
+              src="/logo.jpg"
+              alt="Twilight Finland Logo"
+              className="h-10 w-12 rounded-md"
+            />
+            <div className="ml-3">
+              <h1 className="text-lg font-bold text-white">Twilight Finland</h1>
+              <p className="text-xs text-gray-300">Student Portal</p>
+            </div>
+          </div>
+        </div>
 
         {/* User Profile Section */}
         <div className="border-b border-blue-900 p-4">
           <div className="flex items-center">
-           <Avatar
-                img={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  userData.fullname,
-                )}&background=0D8ABC&color=fff`}
-                alt="User avatar"
-                size="md"
-              />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-white">
+            <Avatar
+              img=""
+              alt="User Avatar"
+              size="md"
+              className="mr-3"
+              placeholderInitials={userData.fullname
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-white">
                 {userData.fullname}
-              </p>
+              </h3>
               <p className="text-xs text-gray-300">{userData.email}</p>
             </div>
           </div>
-          <div className="mt-4 space-y-2 text-xs text-gray-300">
+
+          {/* User Details */}
+          <div className="mt-3 space-y-1 text-xs text-gray-300">
             {userData.mobile && (
-              <p className="flex items-center">
-                <span className="mr-2">📱</span>
-                {userData.mobile}
-              </p>
+              <div className="flex items-center">
+                <Phone size={12} className="mr-2" />
+                <span>{userData.mobile}</span>
+              </div>
             )}
             {userData.class && (
-              <p className="flex items-center">
+              <div className="flex items-center">
                 <span className="mr-2">🎓</span>
-                Grade: {userData.class}
-              </p>
+                <span>Grade: {userData.class}</span>
+              </div>
             )}
             {userData.country && (
-              <p className="flex items-center">
+              <div className="flex items-center">
                 <span className="mr-2">🌍</span>
-                {userData.country}
-              </p>
-            )}
-            <p className="flex items-center">
-              <span className="mr-2">💰</span>
-              Status: {userData.isPaid ? "Paid" : "Unpaid"}
-            </p>
-            {/* Online/Offline Mode Status - Only show if user has paid */}
-            {examMode && (
-              <p className={`flex items-center ${examMode.color}`}>
-                <span className="mr-2">{examMode.icon}</span>
-                Mode: {examMode.text}
-              </p>
+                <span>{userData.country}</span>
+              </div>
             )}
             {userData.examType && (
-              <p className="flex items-center">
+              <div className="flex items-center">
                 <span className="mr-2">📝</span>
-                Exam: {userData.examType}
-              </p>
+                <span>{userData.examType}</span>
+              </div>
             )}
+            {userData.isPaid && (
+              <div className="flex items-center">
+                <span className="mr-2">💳</span>
+                <span className="text-green-400">Status: Paid</span>
+              </div>
+            )}
+            {getExamModeDisplay()}
           </div>
         </div>
 

@@ -181,6 +181,10 @@ const Dashboard: React.FC = () => {
     navigate("/login");
   };
 
+  const handleMaterialAccess = () => {
+    navigate("/material");
+  };
+
   // ✅ Payment flow
   const handlePayment = async (pkg: ExamPackage) => {
     if (!user) {
@@ -404,10 +408,11 @@ const Dashboard: React.FC = () => {
                           <Button
                             color="blue"
                             className="w-full"
+                            onClick={handleMaterialAccess}
                             disabled={pkg.examStatus !== "upcoming"}
                           >
                             {pkg.examStatus === "upcoming"
-                              ? "Material Available Soon"
+                              ? "Access Learning Material"
                               : "Exam Not Available"}
                           </Button>
                         )}
