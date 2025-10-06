@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Card, Spinner, Alert, Badge } from "flowbite-react";
-import { ChevronDown, ChevronRight, Book, FileText, Play } from "lucide-react";
+import { Card, Spinner, Alert, Badge, Button } from "flowbite-react";
+import { ChevronDown, ChevronRight, Book, FileText, Play, Download } from "lucide-react";
 import { useAuth } from "../Services/Auth/AuthContext";
-import { executeRawQuery } from "../Services/api";
+// import { executeRawQuery } from "../Services/api";
 import Sidebar from "../components/Sidebar";
 
-// Interfaces for the GraphQL response
+// Commented out GraphQL interfaces for learning section
+/*
 interface SubTopic {
   id: string;
   main_topic_id: number;
@@ -65,38 +66,136 @@ const GET_ALL_SUBJECTS_QUERY = `
     } 
   }
 `;
+*/
+
+// New interfaces for PDF-based materials
+interface PDFMaterial {
+  id: string;
+  title: string;
+  filename: string;
+  path: string;
+  type: 'index' | 'topic';
+}
+
+interface ClassMaterials {
+  class: number;
+  indexPDF: PDFMaterial | null;
+  topics: {
+    [topicName: string]: PDFMaterial[];
+  };
+}
 
 const Material: React.FC = () => {
   const { user, logout } = useAuth();
+  
+  // Commented out old state for learning section
+  /*
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(
-    new Set(),
-  );
-  const [expandedMainTopics, setExpandedMainTopics] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
+  const [expandedMainTopics, setExpandedMainTopics] = useState<Set<string>>(new Set());
   const [selectedContent, setSelectedContent] = useState<{
     title: string;
     content: string;
     type: "subject" | "mainTopic" | "subTopic";
   } | null>(null);
+  */
+  
+  // New state for PDF materials
+  const [materials, setMaterials] = useState<ClassMaterials | null>(null);
+  const [selectedPDF, setSelectedPDF] = useState<PDFMaterial | null>(null);
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.class) {
-      fetchSubjects();
+    if (user?.class) {
+      loadMaterials(Number(user.class));
     }
-  }, [user]);
+  }, [user?.class]);
 
-  const fetchSubjects = async () => {
-    if (!user || !user.class) return;
+  // New function to load PDF materials based on class
+  const loadMaterials = async (userClass: number) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch materials from backend API
+      // const materialsResponse = await fetch(`https://api.twilightfinland.eu/api/materials/${userClass}`);
+      const materialsResponse = await fetch(`http://localhost:4000/api/materials/${userClass}`);
+      if (!materialsResponse.ok) {
+        throw new Error('Failed to fetch materials');
+      }
+      const materialsData = await materialsResponse.json();
+      
+      // Fetch index materials
+      // const indexResponse = await fetch(`http://localhost:4000/api/index/${userClass}`);
+      const indexResponse = await fetch(`https://api.twilightfinland.eu/api/index/${userClass}`);
+      let indexPDF: PDFMaterial | null = null;
+      
+      if (indexResponse.ok) {
+        const indexData = await indexResponse.json();
+        if (indexData.indexFiles && indexData.indexFiles.length > 0) {
+          const indexFile = indexData.indexFiles[0]; // Take the first index file
+          indexPDF = {
+            id: `index-${userClass}`,
+            title: indexFile.name,
+            filename: indexFile.filename,
+            // path: `http://localhost:4000${indexFile.url}`,
+            path: `https://api.twilightfinland.eu${indexFile.url}`,
+            type: 'index'
+          };
+        }
+      }
+      
+      // Transform API response to our format
+      const topics: { [topicName: string]: PDFMaterial[] } = {};
+      
+      materialsData.materials.forEach((topicData: any) => {
+        const topicMaterials = topicData.files.map((file: any) => ({
+          id: `${topicData.topic}-${file.filename}`,
+          title: file.name,
+          filename: file.filename,
+          path: `http://localhost:4000${file.url}`,
+          type: 'topic' as const
+        }));
+        topics[topicData.topic] = topicMaterials;
+      });
+      
+      const classMaterials: ClassMaterials = {
+        class: userClass,
+        indexPDF,
+        topics
+      };
+      
+      setMaterials(classMaterials);
+      
+      // Auto-select the index PDF if available, otherwise select the first available material
+      if (indexPDF) {
+        setSelectedPDF(indexPDF);
+      } else {
+        const firstTopic = Object.values(topics)[0];
+        if (firstTopic && firstTopic.length > 0) {
+          setSelectedPDF(firstTopic[0]);
+        }
+      }
+      
+    } catch (err) {
+      console.error("Load materials error:", err);
+      setError("Failed to load learning materials");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+
+
+  // Commented out old functions for learning section
+  /*
+  const fetchSubjects = async (grade: number) => {
     setLoading(true);
     setError(null);
 
     try {
-      const grade = parseInt(user.class, 10);
       const response = await executeRawQuery<GetAllSubjectsResponse>(
         GET_ALL_SUBJECTS_QUERY,
         { grade },
@@ -142,6 +241,33 @@ const Material: React.FC = () => {
   ) => {
     setSelectedContent({ title, content, type });
   };
+  */
+
+  // New functions for PDF materials
+  const toggleTopicExpansion = (topicName: string) => {
+    const newExpanded = new Set(expandedTopics);
+    if (newExpanded.has(topicName)) {
+      newExpanded.delete(topicName);
+    } else {
+      newExpanded.add(topicName);
+    }
+    setExpandedTopics(newExpanded);
+  };
+
+  const handlePDFSelect = (pdf: PDFMaterial) => {
+    setSelectedPDF(pdf);
+  };
+
+  const handleDownload = (pdf: PDFMaterial) => {
+    // Create a temporary link to download the PDF
+    const link = document.createElement('a');
+    link.href = pdf.path;
+    link.download = pdf.filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleLogout = () => {
     logout();
@@ -184,7 +310,7 @@ const Material: React.FC = () => {
               Learning Materials
             </h1>
             <p className="text-lg text-gray-600">
-              Grade {user.class} - Explore your subjects and topics
+              Grade {user.class} - Explore your materials and topics
             </p>
           </div>
 
@@ -203,134 +329,109 @@ const Material: React.FC = () => {
             </Alert>
           )}
 
-          {!loading && !error && subjects.length === 0 && (
+          {!loading && !error && !materials && (
             <Alert color="info" className="mb-6 lg:mb-8">
               No learning materials available for your grade yet.
             </Alert>
           )}
 
-          {!loading && !error && subjects.length > 0 && (
+          {!loading && !error && materials && (
             <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-4">
-              {/* Left Sidebar - Topics Navigation */}
+              {/* Left Sidebar - Materials Navigation */}
               <div className="xl:col-span-1">
                 <Card className="sticky top-4 shadow-lg lg:top-6">
                   <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800 lg:mb-6 lg:text-xl">
                     <Book className="mr-2 text-blue-600 lg:mr-3" size={20} />
-                    Subjects & Topics
+                    Materials & Topics
                   </h3>
                   <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[70vh] lg:space-y-3 lg:pr-2">
-                    {subjects.map((subject) => (
-                      <div
-                        key={subject.id}
-                        className="rounded-xl border shadow-sm transition-shadow hover:shadow-md"
-                      >
-                        {/* Subject Header */}
+                    
+                    {/* Material Index */}
+                    {materials.indexPDF && (
+                      <div className="rounded-xl border shadow-sm transition-shadow hover:shadow-md">
                         <div
-                          className="flex cursor-pointer items-center justify-between rounded-xl p-4 transition-colors hover:bg-blue-50"
-                          onClick={() => {
-                            toggleSubjectExpansion(subject.id);
-                            handleContentSelect(
-                              subject.title,
-                              subject.description,
-                              "subject",
-                            );
-                          }}
+                          className={`flex cursor-pointer items-center justify-between rounded-xl p-4 transition-colors hover:bg-blue-50 ${
+                            selectedPDF?.id === materials.indexPDF.id ? 'bg-blue-100 border-blue-300' : ''
+                          }`}
+                          onClick={() => handlePDFSelect(materials.indexPDF!)}
                         >
                           <div className="flex flex-1 items-center">
                             <div className="mr-3 flex items-center">
-                              {expandedSubjects.has(subject.id) ? (
-                                <ChevronDown
-                                  size={18}
-                                  className="text-blue-600"
-                                />
+                              <FileText size={18} className="text-blue-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-base font-semibold text-gray-800">
+                                Material Index
+                              </h4>
+                              <p className="mt-1 text-sm text-gray-500">
+                                Grade {materials.class} Overview
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Topics */}
+                    {Object.entries(materials.topics).map(([topicName, pdfs]) => (
+                      <div
+                        key={topicName}
+                        className="rounded-xl border shadow-sm transition-shadow hover:shadow-md"
+                      >
+                        {/* Topic Header */}
+                        <div
+                          className="flex cursor-pointer items-center justify-between rounded-xl p-4 transition-colors hover:bg-green-50"
+                          onClick={() => toggleTopicExpansion(topicName)}
+                        >
+                          <div className="flex flex-1 items-center">
+                            <div className="mr-3 flex items-center">
+                              {expandedTopics.has(topicName) ? (
+                                <ChevronDown size={18} className="text-green-600" />
                               ) : (
-                                <ChevronRight
-                                  size={18}
-                                  className="text-gray-500"
-                                />
+                                <ChevronRight size={18} className="text-gray-500" />
                               )}
                             </div>
                             <div>
                               <h4 className="text-base font-semibold text-gray-800">
-                                {subject.title}
+                                {topicName}
                               </h4>
                               <p className="mt-1 text-sm text-gray-500">
-                                {subject.mainTopics.length} topics
+                                {pdfs.length} materials
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Main Topics */}
-                        {expandedSubjects.has(subject.id) && (
+                        {/* PDF Materials */}
+                        {expandedTopics.has(topicName) && (
                           <div className="rounded-b-xl border-t bg-gray-50">
-                            {subject.mainTopics.map((mainTopic) => (
-                              <div key={mainTopic.id}>
-                                {/* Main Topic Header */}
-                                <div
-                                  className="flex cursor-pointer items-center justify-between p-3 pl-10 transition-colors hover:bg-gray-100"
-                                  onClick={() => {
-                                    toggleMainTopicExpansion(mainTopic.id);
-                                    handleContentSelect(
-                                      mainTopic.title,
-                                      mainTopic.content,
-                                      "mainTopic",
-                                    );
-                                  }}
-                                >
-                                  <div className="flex flex-1 items-center">
-                                    <div className="mr-3 flex items-center">
-                                      {expandedMainTopics.has(mainTopic.id) ? (
-                                        <ChevronDown
-                                          size={16}
-                                          className="text-green-600"
-                                        />
-                                      ) : (
-                                        <ChevronRight
-                                          size={16}
-                                          className="text-gray-500"
-                                        />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <h5 className="text-sm font-medium text-gray-700">
-                                        {mainTopic.title}
-                                      </h5>
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        {mainTopic.subTopics.length} subtopics
-                                      </p>
-                                    </div>
+                            {pdfs.map((pdf) => (
+                              <div
+                                key={pdf.id}
+                                className={`cursor-pointer border-l-3 border-purple-200 p-3 pl-10 transition-colors hover:border-purple-400 hover:bg-gray-200 ${
+                                  selectedPDF?.id === pdf.id ? 'bg-purple-100 border-purple-500' : ''
+                                }`}
+                                onClick={() => handlePDFSelect(pdf)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <FileText size={14} className="mr-3 text-purple-600" />
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {pdf.title}
+                                    </span>
                                   </div>
+                                  <Button
+                                    size="xs"
+                                    color="light"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownload(pdf);
+                                    }}
+                                    className="ml-2"
+                                  >
+                                    <Download size={12} />
+                                  </Button>
                                 </div>
-
-                                {/* Sub Topics */}
-                                {expandedMainTopics.has(mainTopic.id) && (
-                                  <div className="bg-gray-100">
-                                    {mainTopic.subTopics.map((subTopic) => (
-                                      <div
-                                        key={subTopic.id}
-                                        className="cursor-pointer border-l-3 border-purple-200 p-3 pl-16 transition-colors hover:border-purple-400 hover:bg-gray-200"
-                                        onClick={() =>
-                                          handleContentSelect(
-                                            subTopic.title,
-                                            subTopic.content,
-                                            "subTopic",
-                                          )
-                                        }
-                                      >
-                                        <div className="flex items-center">
-                                          <FileText
-                                            size={14}
-                                            className="mr-3 text-purple-600"
-                                          />
-                                          <span className="text-sm font-medium text-gray-700">
-                                            {subTopic.title}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
                               </div>
                             ))}
                           </div>
@@ -341,75 +442,57 @@ const Material: React.FC = () => {
                 </Card>
               </div>
 
-              {/* Right Content Area */}
+              {/* Right Content Area - PDF Viewer */}
               <div className="xl:col-span-3">
                 <Card className="min-h-[70vh] shadow-lg">
-                  {selectedContent ? (
+                  {selectedPDF ? (
                     <div className="p-6">
                       <div className="mb-8 border-b border-gray-200 pb-6">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <h2 className="text-3xl leading-tight font-bold text-gray-900">
-                            {selectedContent.title}
+                            {selectedPDF.title}
                           </h2>
-                          <Badge
-                            color={
-                              selectedContent.type === "subject"
-                                ? "blue"
-                                : selectedContent.type === "mainTopic"
-                                  ? "green"
-                                  : "purple"
-                            }
-                            size="lg"
-                            className="w-fit"
-                          >
-                            {selectedContent.type === "subject"
-                              ? "Subject"
-                              : selectedContent.type === "mainTopic"
-                                ? "Main Topic"
-                                : "Sub Topic"}
-                          </Badge>
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              color={selectedPDF.type === "index" ? "blue" : "purple"}
+                              size="lg"
+                              className="w-fit"
+                            >
+                              {selectedPDF.type === "index" ? "Index" : "Topic Material"}
+                            </Badge>
+                            <Button
+                              color="blue"
+                              size="sm"
+                              onClick={() => handleDownload(selectedPDF)}
+                            >
+                              <Download size={16} className="mr-2" />
+                              Download
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="prose prose-lg max-w-none">
-                        <div
-                          className="space-y-4 text-base leading-relaxed text-gray-700 
-                            [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-gray-300 [&_table]:bg-white [&_table]:shadow-sm [&_table]:my-4 [&_table]:min-w-[600px]
-                            [&_table]:overflow-x-auto [&_table]:block [&_table]:whitespace-nowrap sm:[&_table]:table sm:[&_table]:whitespace-normal
-                            [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-gray-900 [&_th]:text-xs sm:[&_th]:text-sm [&_th]:min-w-[100px]
-                            [&_td]:border [&_td]:border-gray-300 [&_td]:px-3 [&_td]:py-2 [&_td]:text-gray-700 [&_td]:text-xs sm:[&_td]:text-sm [&_td]:min-w-[100px]
-                            [&_tr]:block sm:[&_tr]:table-row
-                            [&_thead]:block sm:[&_thead]:table-header-group
-                            [&_tbody]:block sm:[&_tbody]:table-row-group
-                            [&_tr:nth-child(even)]:bg-gray-50 [&_tr:hover]:bg-gray-100
-                            [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ul]:my-4
-                            [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2 [&_ol]:my-4
-                            [&_li]:text-gray-700 [&_li]:leading-relaxed [&_li]:text-sm sm:[&_li]:text-base
-                            [&_ul_ul]:list-[circle] [&_ol_ol]:list-[lower-alpha]
-                            [&_h1]:text-2xl sm:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-gray-900 [&_h1]:mb-4 [&_h1]:mt-6
-                            [&_h2]:text-xl sm:[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mb-3 [&_h2]:mt-5
-                            [&_h3]:text-lg sm:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-gray-800 [&_h3]:mb-3 [&_h3]:mt-4
-                            [&_h4]:text-base sm:[&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-gray-700 [&_h4]:mb-2 [&_h4]:mt-4
-                            [&_h5]:text-sm sm:[&_h5]:text-base [&_h5]:font-semibold [&_h5]:text-gray-700 [&_h5]:mb-2 [&_h5]:mt-3
-                            [&_h6]:text-xs sm:[&_h6]:text-sm [&_h6]:font-semibold [&_h6]:text-gray-600 [&_h6]:mb-2 [&_h6]:mt-3
-                            [&_p]:mb-4 [&_p]:leading-relaxed [&_p]:text-gray-700 [&_p]:text-sm sm:[&_p]:text-base
-                            [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-600 [&_blockquote]:my-4
-                            [&_strong]:font-semibold [&_strong]:text-gray-900
-                            [&_em]:italic [&_em]:text-gray-700
-                            [&_code]:bg-gray-100 [&_code]:px-2 [&_code]:py-1 [&_code]:rounded [&_code]:text-xs sm:[&_code]:text-sm [&_code]:font-mono [&_code]:text-gray-800
-                            [&_pre]:bg-gray-100 [&_pre]:p-3 sm:[&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-4 [&_pre]:text-xs sm:[&_pre]:text-sm
-                            [&_img]:max-w-full [&_img]:w-auto [&_img]:h-auto [&_img]:max-h-[500px] [&_img]:object-contain [&_img]:rounded-lg [&_img]:shadow-lg [&_img]:my-6 [&_img]:mx-auto [&_img]:block [&_img]:border [&_img]:border-gray-200 [&_img]:transition-transform [&_img]:hover:scale-105
-                            [&_figure]:text-center [&_figure]:my-6 [&_figure]:p-4 [&_figure]:bg-gray-50 [&_figure]:rounded-lg [&_figure]:border [&_figure]:border-gray-200
-                            [&_figcaption]:text-sm [&_figcaption]:text-gray-600 [&_figcaption]:mt-3 [&_figcaption]:italic [&_figcaption]:font-medium
-                            [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800"
-                          style={{
-                            overflowX: 'auto',
-                            WebkitOverflowScrolling: 'touch'
-                          }}
-                          dangerouslySetInnerHTML={{
-                            __html: selectedContent.content,
-                          }}
-                        />
+                      {/* PDF Viewer */}
+                      <div className="w-full">
+                        <div className="rounded-lg border border-gray-300 bg-white shadow-sm">
+                          <iframe
+                            src={selectedPDF.path}
+                            className="h-[600px] w-full rounded-lg"
+                            title={selectedPDF.title}
+                            style={{ minHeight: '600px' }}
+                          />
+                        </div>
+                        <div className="mt-4 text-center">
+                          <p className="text-sm text-gray-600">
+                            If the PDF doesn't load properly, you can{' '}
+                            <button
+                              onClick={() => handleDownload(selectedPDF)}
+                              className="text-blue-600 underline hover:text-blue-800"
+                            >
+                              download it here
+                            </button>
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -418,12 +501,11 @@ const Material: React.FC = () => {
                         <Play size={48} className="text-blue-600" />
                       </div>
                       <h3 className="mb-4 text-2xl font-semibold text-gray-700">
-                        Select a Topic to Start Learning
+                        Select a Material to Start Learning
                       </h3>
                       <p className="max-w-md text-lg text-gray-500">
-                        Choose a subject, main topic, or subtopic from the left
-                        sidebar to view its content and start your learning
-                        journey.
+                        Choose a material index or topic from the left sidebar to view
+                        the PDF content and start your learning journey.
                       </p>
                     </div>
                   )}
