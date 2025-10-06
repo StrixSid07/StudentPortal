@@ -155,7 +155,8 @@ const Material: React.FC = () => {
           id: `${topicData.topic}-${file.filename}`,
           title: file.name,
           filename: file.filename,
-          path: `http://localhost:4000${file.url}`,
+          // path: `http://localhost:4000${file.url}`,
+          path: `https://api.twilightfinland.eu${file.url}`,
           type: 'topic' as const
         }));
         topics[topicData.topic] = topicMaterials;
