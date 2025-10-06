@@ -120,8 +120,8 @@ const Material: React.FC = () => {
     
     try {
       // Fetch materials from backend API
-      // const materialsResponse = await fetch(`https://api.twilightfinland.eu/api/materials/${userClass}`);
-      const materialsResponse = await fetch(`http://localhost:4000/api/materials/${userClass}`);
+      const materialsResponse = await fetch(`https://api.twilightfinland.eu/api/materials/${userClass}`);
+      // const materialsResponse = await fetch(`http://localhost:4000/api/materials/${userClass}`);
       if (!materialsResponse.ok) {
         throw new Error('Failed to fetch materials');
       }
